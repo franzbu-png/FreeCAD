@@ -202,6 +202,8 @@ Clipping::Clipping(Gui::View3DInventor* view, App::Document* showOn, QWidget* pa
     {
         QSignalBlocker blocker(d->ui.checkBoxCaps);
         d->ui.checkBoxCaps->setChecked(viewer->isSectionCapping());
+        QSignalBlocker blocker2(d->ui.checkBoxInterference);
+        d->ui.checkBoxInterference->setChecked(viewer->isSectionCapInterference());
     }
 }
 
@@ -243,6 +245,8 @@ void Clipping::setupConnections()
             this, &Clipping::onGroupBoxZToggled);
     connect(d->ui.checkBoxCaps, &QCheckBox::toggled,
             this, &Clipping::onCheckBoxCapsToggled);
+    connect(d->ui.checkBoxInterference, &QCheckBox::toggled,
+            this, &Clipping::onCheckBoxInterferenceToggled);
     connect(d->ui.clipX, qOverload<double>(&QDoubleSpinBox::valueChanged),
             this, &Clipping::onClipXValueChanged);
     connect(d->ui.clipY, qOverload<double>(&QDoubleSpinBox::valueChanged),
@@ -297,6 +301,13 @@ void Clipping::onCheckBoxCapsToggled(bool on)
 {
     if (d->view) {
         d->view->getViewer()->setSectionCapping(on);
+    }
+}
+
+void Clipping::onCheckBoxInterferenceToggled(bool on)
+{
+    if (d->view) {
+        d->view->getViewer()->setSectionCapInterference(on);
     }
 }
 

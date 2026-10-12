@@ -55,7 +55,8 @@ struct GuiExport SectionCapRecord
 
 /** Fills the cut faces of the active clip planes in the part's own material,
  * using the stencil buffer, hatches and outlines them. Each part gets its own
- * hatch.
+ * hatch. Where the cuts of two parts overlap, the overlap can be hatched and
+ * outlined in red.
  *
  * Must be the last child of the viewer's view provider root, so that every clip
  * plane is in the traversal state. Open and transparent meshes are reported in
@@ -77,6 +78,12 @@ public:
 
     void setScene(SoNode* scene);
     void setResolver(Resolver resolve);
+    /// Hatch and outline in red where the cuts of two parts overlap.
+    void setInterference(bool on);
+    bool isInterference() const
+    {
+        return interference;
+    }
 
     const std::vector<SectionCapRecord>& lastRecords() const
     {
@@ -123,6 +130,7 @@ private:
 
     SoNode* scene {nullptr};
     Resolver resolve;
+    bool interference {false};
     std::map<std::string, int> hatchOf;  // by key, so a part keeps its hatch
     std::vector<int> hatchUse;
 

@@ -602,6 +602,25 @@ Set to 0 to redraw as fast as the graphics driver allows.</string>
           </property>
          </widget>
         </item>
+        <item row="8" column="0" colspan="2">
+         <widget class="Gui::PrefCheckBox" name="checkSectionCapInterference">
+          <property name="toolTip">
+           <string>Hatch and outline in red where the section caps of two parts overlap.</string>
+          </property>
+          <property name="text">
+           <string>Highlight interference</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+          <property name="prefEntry" stdset="0">
+           <cstring>SectionCapInterference</cstring>
+          </property>
+          <property name="prefPath" stdset="0">
+           <cstring>View</cstring>
+          </property>
+         </widget>
+        </item>
        </layout>
       </item>
      </layout>

@@ -229,6 +229,13 @@ const std::vector<std::pair<const char*, Stipple>>& hatches()
     return list;
 }
 
+/// Thick diagonal stripes, 3 of every 8 pixels.
+const Stipple& interferenceHatch()
+{
+    static const Stipple bits = stipple([](int x, int y) { return (x + y) % 8 < 3; });
+    return bits;
+}
+
 }  // namespace
 
 void SoFCSectionCap::initClass()
@@ -290,6 +297,12 @@ int SoFCSectionCap::hatchFor(const std::string& key)
     return it->second;
 }
 
+void SoFCSectionCap::setInterference(bool on)
+{
+    interference = on;
+    touch();
+}
+
 void SoFCSectionCap::GLRender(SoGLRenderAction* action)
 {
     SoState* state = action->getState();
@@ -346,15 +359,26 @@ void SoFCSectionCap::GLRender(SoGLRenderAction* action)
         glClipPlane(static_cast<GLenum>(GL_CLIP_PLANE0 + j), equation);
     }
 
+    // bit 0: inside the current part; bit 1: covered by an earlier part's cap on
+    // this plane; bit 2: where two parts' caps overlap
+    const bool overlaps = interference && stencilBits >= 3;
     bool drewCap = false;
     glClearStencil(0);
-    glStencilMask(0x1);
+    glStencilMask(0x7);
     glClear(GL_STENCIL_BUFFER_BIT);
     glEnable(GL_STENCIL_TEST);
     glDisable(GL_CULL_FACE);
     glDisable(GL_LIGHTING);
     glDisable(GL_TEXTURE_2D);
     glDisable(GL_BLEND);
+
+    auto drawLines = [](const std::vector<float>& lines) {
+        glBegin(GL_LINES);
+        for (std::size_t i = 0; i + 2 < lines.size(); i += 3) {
+            glVertex3f(lines[i], lines[i + 1], lines[i + 2]);
+        }
+        glEnd();
+    };
 
     for (int p = 0; p < nplanes; ++p) {
         const SbPlane plane = elt->get(p, TRUE);
@@ -376,6 +400,11 @@ void SoFCSectionCap::GLRender(SoGLRenderAction* action)
             }
         };
 
+        if (p > 0 && overlaps) {
+            glStencilMask(0x6);
+            glClear(GL_STENCIL_BUFFER_BIT);
+        }
+        std::vector<Group*> capped;
         for (Group& group : groups) {
             SectionCapRecord& rec = records.emplace_back();
             rec.key = group.key;
@@ -440,6 +469,13 @@ void SoFCSectionCap::GLRender(SoGLRenderAction* action)
                 }
                 glEnd();
             };
+            auto stippled = [&](const Stipple& bits, const SbColor& color) {
+                glEnable(GL_POLYGON_STIPPLE);
+                glPolygonStipple(bits.data());
+                glColor3f(color[0], color[1], color[2]);
+                quad();
+                glDisable(GL_POLYGON_STIPPLE);
+            };
             // lit like a face of the part lying in the plane, facing the viewer, a
             // step darker so the cut still reads as one
             const SbVec3f n = normal.dot(viewDir) < 0.0f ? normal : -normal;
@@ -459,27 +495,47 @@ void SoFCSectionCap::GLRender(SoGLRenderAction* action)
             glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, m.shininess * 128.0f);
             glNormal3f(n[0], n[1], n[2]);
             quad();
+            if (overlaps) {
+                // Where an earlier part's cap already is, fill again over it and
+                // mark the overlap. That cap passed the depth test there; this
+                // quad's depth can be off by a rounding error, so skip the test.
+                glDisable(GL_DEPTH_TEST);
+                glStencilMask(0x4);
+                glStencilFunc(GL_EQUAL, 0x7, 0x3);
+                glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+                quad();
+                glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+                glEnable(GL_DEPTH_TEST);
+            }
             glDisable(GL_LIGHTING);
 
-            // the part's hatch, in a darker shade
-            const SbColor ink = m.diffuse * 0.4f;
-            glEnable(GL_POLYGON_STIPPLE);
-            glPolygonStipple(pattern.second.data());
-            glColor3f(ink[0], ink[1], ink[2]);
-            quad();
-            glDisable(GL_POLYGON_STIPPLE);
+            // the part's hatch, outside any overlap
+            glStencilFunc(GL_EQUAL, 1, overlaps ? 0x3 : 0x1);
+            stippled(pattern.second, SbColor(m.diffuse * 0.4f));
+
+            if (overlaps) {
+                // red hatch over the overlap, then add this cap to the covered bit
+                glStencilFunc(GL_EQUAL, 0x3, 0x3);
+                glDisable(GL_DEPTH_TEST);
+                stippled(interferenceHatch(), SbColor(0.9f, 0.1f, 0.1f));
+                glEnable(GL_DEPTH_TEST);
+                glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+                glDepthMask(GL_FALSE);
+                glStencilMask(0x2);
+                glStencilFunc(GL_EQUAL, 0x3, 0x1);
+                glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+                quad();
+                glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+                glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+                glDepthMask(GL_TRUE);
+            }
             glDisable(GL_POLYGON_OFFSET_FILL);
 
             // outline: where the plane crosses the part's triangles
             glDisable(GL_STENCIL_TEST);
             glLineWidth(1.0f);  // half the default edge width
             glColor3f(0.1f, 0.1f, 0.1f);
-            const std::vector<float>& outline = outlineOf(group, plane);
-            glBegin(GL_LINES);
-            for (std::size_t i = 0; i + 2 < outline.size(); i += 3) {
-                glVertex3f(outline[i], outline[i + 1], outline[i + 2]);
-            }
-            glEnd();
+            drawLines(outlineOf(group, plane));
             glEnable(GL_STENCIL_TEST);
 
             // 3. clear the bit inside this group's rectangle
@@ -489,6 +545,19 @@ void SoFCSectionCap::GLRender(SoGLRenderAction* action)
 
             rec.status = "capped";
             drewCap = true;
+            capped.push_back(&group);
+        }
+
+        if (overlaps && !capped.empty()) {
+            // outline the overlaps in red: the outlines, widened, inside them
+            glDisable(GL_DEPTH_TEST);
+            glStencilFunc(GL_EQUAL, 0x4, 0x4);
+            glLineWidth(3.0f);
+            glColor3f(0.9f, 0.1f, 0.1f);
+            for (Group* group : capped) {
+                drawLines(outlineOf(*group, plane));
+            }
+            glEnable(GL_DEPTH_TEST);
         }
     }
 

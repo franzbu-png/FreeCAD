@@ -4171,6 +4171,7 @@ void View3DInventorViewer::setSectionCapping(bool on)
             return name;
         });
         pcSectionCap->setScene(objectGroup);
+        pcSectionCap->setInterference(sectionCapInterference);
         // last child, so that every clip plane is in the traversal state
         pcViewProviderRoot->addChild(pcSectionCap);
     }
@@ -4189,6 +4190,20 @@ void View3DInventorViewer::setSectionCapping(bool on)
 bool View3DInventorViewer::isSectionCapping() const
 {
     return pcSectionCap != nullptr;
+}
+
+void View3DInventorViewer::setSectionCapInterference(bool on)
+{
+    sectionCapInterference = on;
+    if (pcSectionCap) {
+        pcSectionCap->setInterference(on);
+        redraw();
+    }
+}
+
+bool View3DInventorViewer::isSectionCapInterference() const
+{
+    return sectionCapInterference;
 }
 
 const Gui::Inventor::SoFCSectionCap* View3DInventorViewer::getSectionCap() const

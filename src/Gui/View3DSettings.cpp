@@ -107,6 +107,7 @@ void View3DSettings::applySettings()
     OnChange(*hGrp, "PickRadius");
     OnChange(*hGrp, "TransparentObjectRenderType");
     OnChange(*hGrp, "SectionCaps");
+    OnChange(*hGrp, "SectionCapInterference");
 
     auto lightSourcesGrp = hGrp->GetGroup("LightSources");
     OnChange(*lightSourcesGrp, "EnableHeadlight");
@@ -404,6 +405,11 @@ void View3DSettings::OnChange(ParameterGrp::SubjectType& rCaller, ParameterGrp::
     else if (strcmp(Reason, "SectionCaps") == 0) {
         for (auto _viewer : _viewers) {
             _viewer->setSectionCapping(rGrp.GetBool("SectionCaps", true));
+        }
+    }
+    else if (strcmp(Reason, "SectionCapInterference") == 0) {
+        for (auto _viewer : _viewers) {
+            _viewer->setSectionCapInterference(rGrp.GetBool("SectionCapInterference", true));
         }
     }
     else if (strcmp(Reason, "ShowFPS") == 0) {

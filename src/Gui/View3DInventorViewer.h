@@ -476,6 +476,9 @@ public:
     /** Section caps for the active clip planes (see SoFCSectionCap). */
     void setSectionCapping(bool on);
     bool isSectionCapping() const;
+    /// Hatch and outline in red where the cuts of two parts overlap.
+    void setSectionCapInterference(bool on);
+    bool isSectionCapInterference() const;
     /// Null while section caps are off.
     const Gui::Inventor::SoFCSectionCap* getSectionCap() const;
 
@@ -711,6 +714,7 @@ private:
 
     SoClipPlane* pcClipPlane;
     Gui::Inventor::SoFCSectionCap* pcSectionCap {nullptr};
+    bool sectionCapInterference {true};
 
     RenderType renderType;
     QOpenGLFramebufferObject* framebuffer;

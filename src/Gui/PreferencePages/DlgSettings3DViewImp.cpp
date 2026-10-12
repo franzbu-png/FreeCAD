@@ -61,6 +61,7 @@ void DlgSettings3DViewImp::saveSettings()
 
     ui->comboTransparentRender->onSave();
     ui->checkSectionCaps->onSave();
+    ui->checkSectionCapInterference->onSave();
     ui->CheckBox_CornerCoordSystem->onSave();
     ui->SpinBox_CornerCoordSystemSize->onSave();
     ui->CheckBox_ShowAxisCross->onSave();
@@ -94,6 +95,7 @@ void DlgSettings3DViewImp::loadSettings()
     ui->radioOrthographic->onRestore();
     ui->comboTransparentRender->onRestore();
     ui->checkSectionCaps->onRestore();
+    ui->checkSectionCapInterference->onRestore();
     ui->xAxisColor->onRestore();
     ui->yAxisColor->onRestore();
     ui->zAxisColor->onRestore();
